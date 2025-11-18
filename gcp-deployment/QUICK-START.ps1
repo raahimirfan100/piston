@@ -44,26 +44,55 @@ kubectl apply -f service.yaml
 Write-Host "`nStep 5/7: Waiting for pod to be ready (2-3 minutes)..." -ForegroundColor Yellow
 kubectl wait --for=condition=ready pod -l app=piston-api -n piston --timeout=300s
 
-Write-Host "`nStep 6/7: Installing language packages (3-4 minutes)..." -ForegroundColor Yellow
-$languages = @("python=3.12.0", "node=20.11.1", "typescript=5.0.3", "java=15.0.2", "go=1.16.2", "rust=1.68.2", "gcc=10.2.0")
-foreach ($lang in $languages) {
-    Write-Host "  Installing $lang..." -ForegroundColor Gray
-    kubectl exec -n piston deployment/piston-api -- node /piston/cli/index.js ppman install $lang
-}
-
-Write-Host "`nStep 7/7: Getting service IP..." -ForegroundColor Yellow
+Write-Host "`nStep 6/8: Getting service IP..." -ForegroundColor Yellow
 Start-Sleep -Seconds 10
 $SERVICE_IP = kubectl get svc piston-api -n piston -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+
+Write-Host "`nStep 7/8: Installing language packages via API (3-6 minutes)..." -ForegroundColor Yellow
+Write-Host "Service IP: $SERVICE_IP" -ForegroundColor Gray
+Write-Host "Checking available packages..." -ForegroundColor Gray
+$available = Invoke-RestMethod -Method Get -Uri "http://$SERVICE_IP:2000/api/v2/packages"
+
+$desired = @(
+    @{ language = "python"; version = "3.12.0" },
+    @{ language = "node"; version = "20.11.1" },
+    @{ language = "typescript"; version = "5.0.3" },
+    @{ language = "java"; version = "15.0.2" },
+    @{ language = "go"; version = "1.16.2" },
+    @{ language = "rust"; version = "1.68.2" },
+    @{ language = "gcc"; version = "10.2.0" }
+)
+
+foreach ($pkg in $desired) {
+    $already = $available | Where-Object { $_.language -eq $pkg.language -and $_.language_version -eq $pkg.version -and $_.installed }
+    if ($already) {
+        Write-Host "  Skipping $($pkg.language) $($pkg.version) (already installed)" -ForegroundColor DarkGray
+        continue
+    }
+    Write-Host "  Installing $($pkg.language) $($pkg.version)..." -ForegroundColor Gray
+    try {
+        $body = $pkg | ConvertTo-Json
+        $resp = Invoke-RestMethod -Method Post -Uri "http://$SERVICE_IP:2000/api/v2/packages" -Body $body -ContentType "application/json" -TimeoutSec 600
+        Write-Host "    -> Installed $($resp.language) $($resp.version)" -ForegroundColor Green
+    }
+    catch {
+        Write-Host "    !! Failed $($pkg.language) $($pkg.version): $($_.Exception.Message)" -ForegroundColor Red
+    }
+}
+
+Write-Host "`nStep 8/8: Verifying runtimes..." -ForegroundColor Yellow
+$runtimes = Invoke-RestMethod -Method Get -Uri "http://$SERVICE_IP:2000/api/v2/runtimes"
+Write-Host "Installed runtimes count: $($runtimes.Count)" -ForegroundColor Cyan
+if ($runtimes.Count -eq 0) { Write-Host "WARNING: No runtimes installed" -ForegroundColor Red }
 
 Write-Host "`n========================================" -ForegroundColor Green
 Write-Host "  DEPLOYMENT COMPLETE!" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
 Write-Host "`nAPI URL: http://${SERVICE_IP}:2000" -ForegroundColor Cyan
-Write-Host "`nTest with:" -ForegroundColor Yellow
+Write-Host "`nTest runtimes:" -ForegroundColor Yellow
 Write-Host "  curl http://${SERVICE_IP}:2000/api/v2/runtimes" -ForegroundColor White
-Write-Host "`nLanguages installed:" -ForegroundColor Yellow
-Write-Host "  Python 3.12.0, Node.js 20.11.1, TypeScript 5.0.3," -ForegroundColor White
-Write-Host "  Java 15.0.2, Go 1.16.2, Rust 1.68.2, C/C++ GCC 10.2.0" -ForegroundColor White
+Write-Host "`nInstall status summary:" -ForegroundColor Yellow
+foreach ($pkg in $desired) { Write-Host "  $($pkg.language) $($pkg.version)" -ForegroundColor White }
 Write-Host "`nMonitor with:" -ForegroundColor Yellow
 Write-Host "  kubectl get pods -n piston" -ForegroundColor White
 Write-Host "  kubectl logs -n piston deployment/piston-api -f" -ForegroundColor White
