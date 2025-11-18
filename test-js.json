@@ -1,0 +1,10 @@
+{
+  "language": "javascript",
+  "version": "20.11.1",
+  "files": [
+    {
+      "name": "main.js",
+      "content": "console.log('JavaScript execution successful!');\nconsole.log('Node version:', process.version);"
+    }
+  ]
+}

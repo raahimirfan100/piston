@@ -1,0 +1,10 @@
+{
+  "language": "python",
+  "version": "3.12.0",
+  "files": [
+    {
+      "name": "main.py",
+      "content": "print('Hello from Piston on GCP!')\nprint('Python version:', __import__('sys').version)"
+    }
+  ]
+}

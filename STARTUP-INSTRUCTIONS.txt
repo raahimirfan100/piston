@@ -1,0 +1,104 @@
+# 🚀 PISTON EVENT - STARTUP INSTRUCTIONS
+# Execute these commands tomorrow morning BEFORE your event
+
+# ═══════════════════════════════════════════════════════════════════
+# QUICK START (2-3 minutes to be live)
+# ═══════════════════════════════════════════════════════════════════
+
+# Step 1: Start the pod (takes 2-3 minutes)
+kubectl scale deployment piston-api -n piston --replicas=1
+
+# Step 2: Wait for pod to be ready
+# Run this command and wait until you see "1/1 Running"
+kubectl get pods -n piston -w
+
+# Step 3: Verify API is responding
+# Your API URL: http://34.59.81.173:2000
+curl http://34.59.81.173:2000/api/v2/runtimes
+
+# ═══════════════════════════════════════════════════════════════════
+# ALTERNATIVE: Use the Control Script (Interactive Menu)
+# ═══════════════════════════════════════════════════════════════════
+
+cd gcp-deployment
+.\event-controls.ps1
+# Then select option 2 (Startup)
+
+# ═══════════════════════════════════════════════════════════════════
+# VERIFICATION CHECKLIST
+# ═══════════════════════════════════════════════════════════════════
+
+# ✅ Check pod is running:
+kubectl get pods -n piston
+
+# ✅ Check API responds:
+curl http://34.59.81.173:2000/api/v2/runtimes
+
+# ✅ Test a language execution:
+# (PowerShell)
+$body = @{ language = "python"; version = "3.12.0"; files = @(@{ content = "print('Ready for event!')" }) } | ConvertTo-Json -Depth 10
+Invoke-RestMethod -Uri "http://34.59.81.173:2000/api/v2/execute" -Method Post -Body $body -ContentType "application/json"
+
+# ═══════════════════════════════════════════════════════════════════
+# INSTALLED LANGUAGES (All Ready to Use)
+# ═══════════════════════════════════════════════════════════════════
+# ✅ Python 3.12.0
+# ✅ Node.js 20.11.1
+# ✅ TypeScript 5.0.3
+# ✅ Java 15.0.2
+# ✅ Go 1.16.2
+# ✅ Rust 1.68.2
+# ✅ C/C++ (GCC) 10.2.0
+
+# ═══════════════════════════════════════════════════════════════════
+# PERFORMANCE SPECS
+# ═══════════════════════════════════════════════════════════════════
+# • Machine Type: n2-standard-4 (4 vCPU, 16GB RAM)
+# • Storage: 100GB SSD-backed
+# • Tested Capacity: 50+ concurrent requests
+# • Response Time: ~2 seconds under heavy load
+# • Success Rate: 100% in stress tests
+
+# ═══════════════════════════════════════════════════════════════════
+# MONITORING DURING EVENT
+# ═══════════════════════════════════════════════════════════════════
+
+# Watch pod status:
+kubectl get pods -n piston -w
+
+# View live logs:
+kubectl logs -n piston -l app=piston-api --tail=50 -f
+
+# Check resource usage:
+kubectl top pods -n piston
+
+# ═══════════════════════════════════════════════════════════════════
+# TROUBLESHOOTING
+# ═══════════════════════════════════════════════════════════════════
+
+# If pod won't start:
+kubectl describe pod -n piston -l app=piston-api
+
+# If pod crashes:
+kubectl logs -n piston -l app=piston-api --tail=100
+
+# Force restart pod:
+kubectl delete pod -n piston -l app=piston-api
+
+# ═══════════════════════════════════════════════════════════════════
+# SHUTDOWN AFTER EVENT (Save costs)
+# ═══════════════════════════════════════════════════════════════════
+
+# Scale to zero (saves $7.50/day):
+kubectl scale deployment piston-api -n piston --replicas=0
+
+# Delete entire cluster (saves $10/day):
+gcloud container clusters delete piston-cluster --zone=us-central1-a --quiet
+
+# ═══════════════════════════════════════════════════════════════════
+# CONTACT INFO
+# ═══════════════════════════════════════════════════════════════════
+# Project: piston-prod-4555
+# API URL: http://34.59.81.173:2000
+# Zone: us-central1-a
+# Cluster: piston-cluster

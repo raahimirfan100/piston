@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: piston-api
+  namespace: piston
+  labels:
+    app: piston-api
+  annotations:
+    # Cloud Load Balancer configuration
+    cloud.google.com/load-balancer-type: "External"
+spec:
+  type: LoadBalancer
+  selector:
+    app: piston-api
+  ports:
+  - name: http
+    port: 2000
+    targetPort: 2000
+    protocol: TCP
+  sessionAffinity: None
+  externalTrafficPolicy: Cluster
